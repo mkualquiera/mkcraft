@@ -1,0 +1,20 @@
+[package]
+name = "mkcraft"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+beryllium = "0.13.3"
+bytemuck = "1.23.0"
+gl33 = "0.2.1"
+imagine = "0.5.1"
+ndarray = "0.16.1"
+pixel_formats = "0.1.5"
+rand = "0.9.1"
+simdnoise = "3.1.6"
+tokio = { version = "1.45.1", features = ["full"] }
+ultraviolet = "0.10.0"
+
+[profile.release]
+opt-level = 3
+lto = true
