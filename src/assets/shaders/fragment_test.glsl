@@ -180,20 +180,20 @@ void main() {
       float freq1z = sin(angle1) * freq1;
 
       // Large slow waves
-      float layer1 = cos(flooredPos.x * freq1x + flooredPos.z * freq1z + time * 0.4) * 0.3;
+      float layer1 = cos(flooredPos.x * freq1x + flooredPos.z * freq1z + time * 0.8) * 0.3;
 
       float freq2x = cos(angle2) * freq2;
       float freq2z = sin(angle2) * freq2;
 
       // Medium detail
-      float layer2 = sin(flooredPos.x * freq2x + flooredPos.z * freq2z + time * 0.6) * 0.2;
+      float layer2 = sin(flooredPos.x * freq2x + flooredPos.z * freq2z + time * 1.2) * 0.2;
 
       float freq3x = cos(angle3) * freq3;
       float freq3z = sin(angle3) * freq3;
 
       // Fine detail
       float layer3 = cos(flooredPos.x * freq3x + flooredPos.z * freq3z + 
-                         time *1.0) * 0.2;
+                         time *0.2) * 0.2;
 
       float waves = (layer1 + layer2 + layer3) * 1.0;
 
@@ -212,8 +212,8 @@ void main() {
 
       //final_color.rgb = 1.0*vec3(layer1* final_color.b, layer1* final_color.b, final_color.b); // Blue-green tint
 
-      vec3 darkColor = vec3(0.05, 0.17, 0.10); // Dark blue-green color
-      vec3 lightColor = vec3(0.45, 0.71, 0.73); // Lighter blue-green color
+      vec3 lightColor = vec3(0.05, 0.15, 0.05); // Dark blue-green color
+      vec3 darkColor = vec3(0.45, 0.71, 0.73); // Lighter blue-green color
       //vec3 lightColor = vec3(122.0/255.0, 64.0/255.0, 30.0/255.0);
 
       final_color.rgb = mix(darkColor, lightColor, layer1 * 0.5 + 0.5);
