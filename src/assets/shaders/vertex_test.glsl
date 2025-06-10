@@ -16,9 +16,9 @@ void main() {
   
   gl_Position = mvp * vec4(pos.x, pos.y, pos.z, 1.0);
   // PS1 effect supposedly
-  //gl_Position.xy = gl_Position.xy / gl_Position.w;
-  //gl_Position.xy = round(gl_Position.xy * vec2(100.0, 75.0)) / vec2(100.0, 75.0);
-  //gl_Position.xy = gl_Position.xy * gl_Position.w;
+  gl_Position.xy = gl_Position.xy / gl_Position.w;
+  gl_Position.xy = round(gl_Position.xy * vec2(100.0, 75.0)) / vec2(100.0, 75.0);
+  gl_Position.xy = gl_Position.xy * gl_Position.w;
   worldPos = pos;
   fragColor = color;
   fragUV = uv * gl_Position.w;
