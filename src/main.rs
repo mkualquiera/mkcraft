@@ -7,7 +7,6 @@ use text::{Text, TextOptions};
 use tokio::task::JoinHandle;
 use ultraviolet::{Mat4, projection};
 
-mod akasha;
 mod camera;
 mod mesh;
 mod physics;

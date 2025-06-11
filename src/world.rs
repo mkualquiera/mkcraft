@@ -1,4 +1,3 @@
-use crate::akasha::decoration::{Decoration, WorldPos, tree::Tree};
 use std::{
     collections::HashMap,
     hash::{DefaultHasher, Hash, Hasher},
@@ -330,46 +329,81 @@ impl ChunkState {
                 for cz in -1..=1 {
                     neighborhood.offset = (cx, cy, cz);
 
-                    let core_chunk = neighborhood.get_chunk(0, 0, 0);
+                    let tree_positions = {
+                        let core_chunk = neighborhood.get_chunk(0, 0, 0);
 
-                    if core_chunk.core_decorated {
-                        continue;
-                    }
-                    core_chunk.core_decorated = true;
+                        if core_chunk.core_decorated {
+                            continue;
+                        }
+                        core_chunk.core_decorated = true;
 
-                    let mut tree_positions = Vec::new();
-
-                    for x in 0..CHUNK_SIZE_X {
-                        for z in 0..CHUNK_SIZE_X {
-                            let height = core_chunk.data.as_ref().unwrap().height_map
-                                [(x + z * CHUNK_SIZE_X) as usize];
-                            if height.is_some() {
-                                let rng = &mut core_chunk.noises.as_mut().unwrap().rng;
-                                if rng.random_bool(0.01) {
-                                    //tree_positions.push((x, height.unwrap(), z));
-                                    tree_positions.push(WorldPos {
-                                        chunk_x: core_chunk.x,
-                                        chunk_y: core_chunk.y,
-                                        chunk_z: core_chunk.z,
-                                        x: x as i32,
-                                        y: height.unwrap() + 1,
-                                        z: z as i32,
-                                    })
+                        let mut tree_positions = vec![];
+                        for x in 0..CHUNK_SIZE_X {
+                            for z in 0..CHUNK_SIZE_X {
+                                let height =
+                                    core_chunk.data.as_ref().unwrap().height_map
+                                        [(x + z * CHUNK_SIZE_X) as usize];
+                                if height.is_some() {
+                                    let rng =
+                                        &mut core_chunk.noises.as_mut().unwrap().rng;
+                                    if rng.random_bool(0.01) {
+                                        tree_positions.push((
+                                            x,
+                                            height.unwrap(),
+                                            z,
+                                            rng.random_range(5..10),
+                                        ));
+                                    }
                                 }
                             }
                         }
-                    }
+                        tree_positions
+                    };
 
-                    for pos in tree_positions {
-                        let tree = Tree::from_locus(pos);
-                        tree.decorate(neighborhood);
+                    for (tree_x, tree_y, tree_z, tree_height) in tree_positions {
+                        for dy in 0..(tree_height / 2) {
+                            for dx in -2..=2 {
+                                for dz in -2..=2 {
+                                    if (dx as i32).abs() + (dz as i32).abs() <= 2 {
+                                        neighborhood.set_block(
+                                            (tree_x + dx) as i32,
+                                            (tree_y + tree_height - dy) as i32,
+                                            (tree_z + dz) as i32,
+                                            6, // Assuming block ID 6 is a leaf
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        for dy in 0..2 {
+                            for dx in -1..=1 {
+                                for dz in -1..=1 {
+                                    if (dx as i32).abs() + (dz as i32).abs() <= 2 {
+                                        neighborhood.set_block(
+                                            (tree_x + dx) as i32,
+                                            (tree_y + tree_height + dy + 1) as i32,
+                                            (tree_z + dz) as i32,
+                                            6, // Assuming block ID 6 is a leaf
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        for dy in 0..tree_height {
+                            neighborhood.set_block(
+                                tree_x as i32,
+                                (tree_y + dy) as i32,
+                                tree_z as i32,
+                                5, // Assuming block ID 5 is a log
+                            );
+                        }
                     }
                 }
             }
 
             // set decorated state
             {
-                let core_chunk = neighborhood.get_chunk(0, 0, 0);
+                let mut core_chunk = neighborhood.get_chunk(0, 0, 0);
                 core_chunk.decorated = true;
             }
 
