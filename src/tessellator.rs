@@ -8,9 +8,7 @@ use rand::Rng;
 use tokio::{spawn, sync::mpsc::UnboundedReceiver};
 
 use crate::{
-    camera,
     mesh::{MeshEnvelope, MeshParams},
-    tessellator,
     tile::{RenderLayer, TileFace, TileRegistry},
     utils::QueuedItem,
     world::{CHUNK_SIZE_X, ChunkUpdateMessage, World, WorldView},

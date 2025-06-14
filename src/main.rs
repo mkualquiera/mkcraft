@@ -1,10 +1,9 @@
-use std::{collections::HashMap, env, sync::Arc};
+use std::{env, sync::Arc};
 
 use beryllium::*;
 use gl33::*;
 use physics::{PhysicsEnvironment, PhysicsObject};
-use text::{Text, TextOptions};
-use tokio::task::JoinHandle;
+use text::TextOptions;
 use ultraviolet::{Mat4, projection};
 
 mod akasha;
@@ -20,14 +19,12 @@ mod toki;
 mod utils;
 mod world;
 
-use camera::{Camera, CameraMovement};
-use mesh::{Mesh, MeshEnvelope};
+use camera::Camera;
 use shader::Shader;
 use texture::TextureManager;
-use utils::QueuedItem;
 use world::{CHUNK_SIZE_X, World};
 
-use crate::{physics::RaycastHit, tessellator::Tessellator, text::into_syllabic};
+use crate::tessellator::Tessellator;
 const RENDER_DISTANCE: i32 = 16; // Number of chunks to render in each direction
 
 //enum QueuedMesh {
@@ -114,7 +111,7 @@ async fn main() {
         _world.register_chunk_update_listener(),
         tile_registry.clone(),
     );
-    let mut physics_env = PhysicsEnvironment::new(
+    let physics_env = PhysicsEnvironment::new(
         _world.register_chunk_update_listener(),
         tile_registry.clone(),
     );

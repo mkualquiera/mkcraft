@@ -1,5 +1,4 @@
-use core::num;
-use std::{cmp::max, error::Error};
+use std::error::Error;
 
 use gl33::GlFns;
 use ndarray::Array2;

@@ -1,11 +1,7 @@
-use std::hash::DefaultHasher;
 
 use rand::Rng;
 
-use crate::akasha::{
-    decoration::{Decoration, WorldPos, tree},
-    locus_into_rng,
-};
+use crate::akasha::decoration::{Decoration, WorldPos};
 
 pub struct Tree {
     tree_x: i32,

@@ -1,24 +1,15 @@
-use crate::akasha::decoration::{Decoration, WorldPos, tree::Tree};
 use std::{
     collections::HashMap,
     hash::{DefaultHasher, Hash, Hasher},
     sync::{Arc, RwLock, RwLockWriteGuard},
 };
 
-use gl33::GlFns;
 use rand::{
     Rng, SeedableRng,
-    rand_core::{block, le},
 };
 use simdnoise::NoiseBuilder;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 
-use crate::{
-    mesh::MeshEnvelope,
-    mesh::MeshParams,
-    tile::RenderLayer,
-    tile::{TileFace, TileRegistry},
-};
 
 pub const CHUNK_SIZE_X: i32 = 32;
 pub const CHUNK_SIZE: i32 = CHUNK_SIZE_X * CHUNK_SIZE_X * CHUNK_SIZE_X; // CHUNK_SIZE_XxCHUNK_SIZE_XxCHUNK_SIZE_X = 4096 blocks per chunk
@@ -204,7 +195,7 @@ impl ChunkData {
                     let mountains_noise =
                         -noise_mountains[(x + z * CHUNK_SIZE_X) as usize];
                     let variance_noise = variance[(x + z * CHUNK_SIZE_X) as usize];
-                    let normalized_variance = (((variance_noise / 0.02) + 1.0) / 2.0);
+                    let normalized_variance = ((variance_noise / 0.02) + 1.0) / 2.0;
 
                     let target_height = (mountains_noise * normalized_variance
                         + base_noise * (1.0 - normalized_variance))

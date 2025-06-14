@@ -1,13 +1,12 @@
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
-    thread::JoinHandle,
 };
 
 use tokio::{spawn, sync::mpsc::UnboundedReceiver};
 
 use crate::{
-    tile::{self, TileRegistry},
+    tile::{TileRegistry},
     utils::QueuedItem,
     world::{CHUNK_SIZE, CHUNK_SIZE_X, ChunkUpdateMessage, World, WorldView},
 };
