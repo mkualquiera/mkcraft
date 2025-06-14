@@ -269,8 +269,6 @@ pub struct ChunkState {
     pub x: i32,
     pub y: i32,
     pub z: i32,
-    pub decorated: bool,
-    pub core_decorated: bool,
 }
 
 impl ChunkState {
@@ -281,8 +279,6 @@ impl ChunkState {
             x,
             y,
             z,
-            decorated: false,
-            core_decorated: false,
         }
     }
 
@@ -302,85 +298,6 @@ impl ChunkState {
 
     pub fn is_formed(&self) -> bool {
         self.data.is_some()
-    }
-
-    pub fn ensure_decorated(neighborhood: &mut Neighborhood) {
-        //if !self.decorated {
-        //    self.ensure_formed();
-        //    // actual decoration logic would go here
-        //    self.decorated = true;
-        //}
-
-        let core_chunk = neighborhood.get_chunk_immutable(0, 0, 0);
-        if core_chunk.decorated {
-            return;
-        }
-
-        // ensure all neighbors are formed
-        for chunk in neighborhood.data.iter_mut() {
-            //let mut chunk_state = chunk.write().unwrap();
-            //chunk_state.ensure_formed();
-            if !chunk.is_formed() {
-                chunk.ensure_formed();
-            }
-        }
-
-        for cx in -1..=1 {
-            for cy in -1..=1 {
-                for cz in -1..=1 {
-                    neighborhood.offset = (cx, cy, cz);
-
-                    let core_chunk = neighborhood.get_chunk(0, 0, 0);
-
-                    if core_chunk.core_decorated {
-                        continue;
-                    }
-                    core_chunk.core_decorated = true;
-
-                    let mut tree_positions = Vec::new();
-
-                    for x in 0..CHUNK_SIZE_X {
-                        for z in 0..CHUNK_SIZE_X {
-                            let height = core_chunk.data.as_ref().unwrap().height_map
-                                [(x + z * CHUNK_SIZE_X) as usize];
-                            if height.is_some() {
-                                let rng = &mut core_chunk.noises.as_mut().unwrap().rng;
-                                if rng.random_bool(0.01) {
-                                    //tree_positions.push((x, height.unwrap(), z));
-                                    tree_positions.push(WorldPos {
-                                        chunk_x: core_chunk.x,
-                                        chunk_y: core_chunk.y,
-                                        chunk_z: core_chunk.z,
-                                        x: x as i32,
-                                        y: height.unwrap() + 1,
-                                        z: z as i32,
-                                    })
-                                }
-                            }
-                        }
-                    }
-
-                    for pos in tree_positions {
-                        let tree = Tree::from_locus(pos);
-                        tree.decorate(neighborhood);
-                    }
-                }
-            }
-
-            // set decorated state
-            {
-                let core_chunk = neighborhood.get_chunk(0, 0, 0);
-                core_chunk.decorated = true;
-            }
-
-            //neighborhood.set_block(
-            //    tree_x as i32,
-            //    (tree_y + tree_height) as i32,
-            //    tree_z as i32,
-            //    6, // Assuming block ID 6 is a leaf
-            //);
-            // make a nice block of leaves around the top
-        }
     }
 
     pub fn set_block(&mut self, x: usize, y: usize, z: usize, block_id: u8) {
@@ -525,35 +442,8 @@ impl World {
         z: i32,
     ) -> Arc<RwLock<ChunkState>> {
         let chunk_arc = Self::ensure_chunk(world, x, y, z);
-        if !chunk_arc.write().unwrap().decorated {
-            //let mut neighbors = [const { None }; 3 * 3 * 3];
-            //for dx in -1..=1 {
-            //    for dy in -1..=1 {
-            //        for dz in -1..=1 {
-            //            let neighbor_x = x + dx;
-            //            let neighbor_y = y + dy;
-            //            let neighbor_z = z + dz;
-            //            neighbors[((dx + 1) * 3 * 3 + (dy + 1) * 3 + (dz + 1)) as usize] = Some(
-            //                Self::ensure_chunk(world, neighbor_x, neighbor_y, neighbor_z),
-            //            );
-            //        }
-            //    }
-            //}
 
-            let mut neighbors =
-                World::ensure_chunks(world, x - 2, x + 2, y - 2, y + 2, z - 2, z + 2);
-
-            let mut neighbors_locked = Vec::with_capacity(27);
-            for neighbor in neighbors.iter_mut() {
-                let neighbor_locked = neighbor.write().unwrap();
-                neighbors_locked.push(neighbor_locked);
-            }
-            ChunkState::ensure_decorated(&mut Neighborhood {
-                data: neighbors_locked,
-                size: 5,
-                offset: (0, 0, 0), // Offset to center the neighborhood around (0, 0, 0)
-            });
-        }
+        ChunkState::ensure_formed(&mut chunk_arc.write().unwrap());
 
         chunk_arc
     }
