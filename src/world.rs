@@ -4,169 +4,17 @@ use std::{
     sync::{Arc, RwLock, RwLockWriteGuard},
 };
 
-use rand::{
-    Rng, SeedableRng,
-};
+use rand::{Rng, SeedableRng};
 use simdnoise::NoiseBuilder;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 
+use crate::akasha::{self, Akasha, AkashaChunk, ChunkNoises};
 
 pub const CHUNK_SIZE_X: i32 = 32;
 pub const CHUNK_SIZE: i32 = CHUNK_SIZE_X * CHUNK_SIZE_X * CHUNK_SIZE_X; // CHUNK_SIZE_XxCHUNK_SIZE_XxCHUNK_SIZE_X = 4096 blocks per chunk
 
 struct ChunkData {
     pub block_ids: [u8; CHUNK_SIZE as usize],
-    pub height_map: [Option<i32>; (CHUNK_SIZE_X * CHUNK_SIZE_X) as usize],
-}
-
-struct ChunkNoises {
-    pub noise: Vec<f32>,
-    pub noise_mountains: Vec<f32>,
-    pub dirt_noise: Vec<f32>,
-    pub variance: Vec<f32>,
-    pub rng: rand::rngs::StdRng,
-}
-
-impl ChunkNoises {
-    pub fn new(x: i32, y: i32, z: i32) -> Self {
-        let (noise, _, _) = NoiseBuilder::fbm_2d_offset(
-            (x * CHUNK_SIZE_X) as f32,
-            CHUNK_SIZE_X as usize,
-            (z * CHUNK_SIZE_X) as f32,
-            CHUNK_SIZE_X as usize,
-        )
-        .with_freq(0.0001)
-        .with_octaves(8)
-        .with_gain(2.2)
-        .with_seed(42)
-        .with_lacunarity(2.0)
-        .generate();
-
-        let (noise_mountains, _, _) = NoiseBuilder::ridge_2d_offset(
-            (x * CHUNK_SIZE_X) as f32,
-            CHUNK_SIZE_X as usize,
-            (z * CHUNK_SIZE_X) as f32,
-            CHUNK_SIZE_X as usize,
-        )
-        .with_freq(0.01 / 64000.0)
-        .with_octaves(12)
-        .with_gain(2.3)
-        .with_seed(42)
-        .with_lacunarity(2.2)
-        .generate();
-
-        let (dirt_noise, min, max) = NoiseBuilder::fbm_2d_offset(
-            (x * CHUNK_SIZE_X) as f32,
-            CHUNK_SIZE_X as usize,
-            (z * CHUNK_SIZE_X) as f32,
-            CHUNK_SIZE_X as usize,
-        )
-        .with_freq(0.0001)
-        .with_octaves(1)
-        .with_gain(2.0)
-        .with_seed(44)
-        .with_lacunarity(2.0)
-        .generate();
-
-        let (variance, _, _) = NoiseBuilder::fbm_2d_offset(
-            (x * CHUNK_SIZE_X) as f32,
-            CHUNK_SIZE_X as usize,
-            (z * CHUNK_SIZE_X) as f32,
-            CHUNK_SIZE_X as usize,
-        )
-        .with_freq(1.0 / 2000.0)
-        .with_octaves(1)
-        .with_gain(1.0)
-        .with_seed(43)
-        .with_lacunarity(1.0)
-        .generate();
-
-        let mut hasher = DefaultHasher::new();
-        (x, y, z).hash(&mut hasher);
-        let seed = hasher.finish() as u64;
-
-        ChunkNoises {
-            noise,
-            noise_mountains,
-            dirt_noise,
-            variance,
-            rng: rand::rngs::StdRng::seed_from_u64(seed),
-        }
-    }
-}
-
-pub struct Neighborhood<'a> {
-    //pub data: [RwLockWriteGuard<'a, ChunkState>; 3 * 3 * 3],
-    pub data: Vec<RwLockWriteGuard<'a, ChunkState>>,
-    pub size: usize,
-    pub offset: (i32, i32, i32),
-}
-
-impl<'a> Neighborhood<'a> {
-    pub fn get_chunk(
-        &mut self,
-        x: i32,
-        y: i32,
-        z: i32,
-    ) -> &mut RwLockWriteGuard<'a, ChunkState> {
-        let (ox, oy, oz) = self.offset;
-        let dx = x.div_euclid(CHUNK_SIZE_X) + ox;
-        let dy = y.div_euclid(CHUNK_SIZE_X) + oy;
-        let dz = z.div_euclid(CHUNK_SIZE_X) + oz;
-        let size = self.size as i32;
-        let offset = (self.size / 2) as i32;
-        let arr_index = ((dx + offset) * size * size
-            + (dy + offset) * size
-            + (dz + offset)) as usize;
-        if arr_index < self.data.len() {
-            &mut self.data[arr_index]
-        } else {
-            panic!(
-                "Index {} out of bounds for neighborhood data array. x={}, y={}, z={}; dx={}, dy={}, dz={}",
-                arr_index, x, y, z, dx, dy, dz
-            );
-        }
-    }
-
-    pub fn get_chunk_immutable(
-        &self,
-        x: i32,
-        y: i32,
-        z: i32,
-    ) -> &RwLockWriteGuard<'a, ChunkState> {
-        let (ox, oy, oz) = self.offset;
-        let dx = x.div_euclid(CHUNK_SIZE_X) + ox;
-        let dy = y.div_euclid(CHUNK_SIZE_X) + oy;
-        let dz = z.div_euclid(CHUNK_SIZE_X) + oz;
-        let size = self.size as i32;
-        let offset = (self.size / 2) as i32;
-        let arr_index = ((dx + offset) * size * size
-            + (dy + offset) * size
-            + (dz + offset)) as usize;
-        if arr_index < self.data.len() {
-            &self.data[arr_index]
-        } else {
-            panic!("Index out of bounds for neighborhood data array");
-        }
-    }
-
-    pub fn set_block(&mut self, x: i32, y: i32, z: i32, block_id: u8) {
-        let chunk = self.get_chunk(x, y, z);
-        chunk.set_block(
-            x.rem_euclid(CHUNK_SIZE_X) as usize,
-            y.rem_euclid(CHUNK_SIZE_X) as usize,
-            z.rem_euclid(CHUNK_SIZE_X) as usize,
-            block_id,
-        );
-    }
-    pub async fn get_block(&mut self, x: i32, y: i32, z: i32) -> u8 {
-        let chunk = self.get_chunk(x, y, z);
-        chunk.get_block(
-            x.rem_euclid(CHUNK_SIZE_X) as usize,
-            y.rem_euclid(CHUNK_SIZE_X) as usize,
-            z.rem_euclid(CHUNK_SIZE_X) as usize,
-        )
-    }
 }
 
 impl ChunkData {
@@ -229,10 +77,7 @@ impl ChunkData {
             }
         }
 
-        ChunkData {
-            block_ids,
-            height_map,
-        }
+        ChunkData { block_ids }
     }
 
     pub fn set_block(&mut self, x: usize, y: usize, z: usize, block_id: u8) {
@@ -256,7 +101,6 @@ impl ChunkData {
 
 pub struct ChunkState {
     pub data: Option<ChunkData>,
-    pub noises: Option<ChunkNoises>,
     pub x: i32,
     pub y: i32,
     pub z: i32,
@@ -266,24 +110,21 @@ impl ChunkState {
     pub fn new(x: i32, y: i32, z: i32) -> Self {
         Self {
             data: None,
-            noises: None,
             x,
             y,
             z,
         }
     }
 
-    pub fn ensure_noised(&mut self) {
-        if self.noises.is_none() {
-            self.noises = Some(ChunkNoises::new(self.x, self.y, self.z));
-        }
-    }
-
-    pub fn ensure_formed(&mut self) {
+    pub fn ensure_formed(&mut self, akasha_chunk: &AkashaChunk) {
         if self.data.is_none() {
-            self.ensure_noised();
-            let noises = self.noises.as_ref().expect("Noises must be initialized");
-            self.data = Some(ChunkData::new(self.x, self.y, self.z, noises));
+            //let noises = self.noises.as_ref().expect("Noises must be initialized");
+            self.data = Some(ChunkData::new(
+                self.x,
+                self.y,
+                self.z,
+                &akasha_chunk.chunk_noises,
+            ));
         }
     }
 
@@ -292,7 +133,6 @@ impl ChunkState {
     }
 
     pub fn set_block(&mut self, x: usize, y: usize, z: usize, block_id: u8) {
-        self.ensure_formed();
         if let Some(data) = &mut self.data {
             data.set_block(x, y, z, block_id);
         } else {
@@ -319,6 +159,7 @@ pub struct ChunkUpdateMessage {
 pub struct World {
     pub chunks: Arc<RwLock<HashMap<(i32, i32, i32), Arc<RwLock<ChunkState>>>>>,
     pub chunk_update_listeners: Vec<UnboundedSender<ChunkUpdateMessage>>,
+    pub akasha: Arc<Akasha>,
 }
 
 impl World {
@@ -335,6 +176,7 @@ impl World {
         World {
             chunks: Arc::new(RwLock::new(HashMap::new())),
             chunk_update_listeners: Vec::new(),
+            akasha: Arc::new(Akasha::new()),
         }
     }
 
@@ -434,8 +276,12 @@ impl World {
     ) -> Arc<RwLock<ChunkState>> {
         let chunk_arc = Self::ensure_chunk(world, x, y, z);
 
-        ChunkState::ensure_formed(&mut chunk_arc.write().unwrap());
+        let akasha_chunk = Akasha::ensure_chunk(&world.akasha, x, y, z);
 
+        ChunkState::ensure_formed(
+            &mut chunk_arc.write().unwrap(),
+            &akasha_chunk.read().unwrap(),
+        );
         chunk_arc
     }
 

@@ -1,7 +1,5 @@
 use std::hash::Hash;
 
-use crate::world::Neighborhood;
-
 use super::locus_into_rng;
 
 pub mod tree;
@@ -18,8 +16,6 @@ pub struct WorldPos {
 
 pub trait Decoration {
     type Locus: Hash;
-
-    fn decorate<'a>(self, neighborhood: &'a mut Neighborhood);
 
     fn from_rng<R: rand::Rng>(rng: &mut R, locus: &Self::Locus) -> Self
     where

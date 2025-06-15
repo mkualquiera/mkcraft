@@ -1,4 +1,3 @@
-
 use rand::Rng;
 
 use crate::akasha::decoration::{Decoration, WorldPos};
@@ -12,7 +11,7 @@ pub struct Tree {
 
 impl Decoration for Tree {
     type Locus = WorldPos;
-    fn decorate<'a>(self, neighborhood: &'a mut crate::world::Neighborhood) {
+    /*fn decorate<'a>(self, neighborhood: &'a mut crate::world::Neighborhood) {
         let Tree {
             tree_x,
             tree_y,
@@ -58,7 +57,7 @@ impl Decoration for Tree {
                 5, // Assuming block ID 5 is a log
             );
         }
-    }
+    }*/
 
     fn from_rng<R: rand::Rng>(rng: &mut R, locus: &Self::Locus) -> Self
     where
