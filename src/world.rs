@@ -20,11 +20,6 @@ struct ChunkData {
 impl ChunkData {
     pub fn new(basis_x: i32, basis_y: i32, basis_z: i32, noises: &ChunkNoises) -> Self {
         let mut block_ids = [0; CHUNK_SIZE as usize];
-        let mut height_map = [None; (CHUNK_SIZE_X * CHUNK_SIZE_X) as usize];
-
-        let noise = &noises.noise;
-        let noise_mountains = &noises.noise_mountains;
-        let variance = &noises.variance;
 
         // do some stuff for now using sine to generate some blocks
         for x in 0..CHUNK_SIZE_X {
@@ -39,15 +34,8 @@ impl ChunkData {
                     //let target_height =
                     //    (global_x as f64 * 0.1 + global_z as f64 * 0.1).sin() * 5.0 + 5.0;
 
-                    let base_noise = noise[(x + z * CHUNK_SIZE_X) as usize];
-                    let mountains_noise =
-                        -noise_mountains[(x + z * CHUNK_SIZE_X) as usize];
-                    let variance_noise = variance[(x + z * CHUNK_SIZE_X) as usize];
-                    let normalized_variance = ((variance_noise / 0.02) + 1.0) / 2.0;
-
-                    let target_height = (mountains_noise * normalized_variance
-                        + base_noise * (1.0 - normalized_variance))
-                        as i32;
+                    let target_height =
+                        noises.target_height[(x + z * CHUNK_SIZE_X) as usize];
 
                     let dirt_height = target_height + 2;
                     let grass_height = dirt_height + 1;
@@ -59,10 +47,6 @@ impl ChunkData {
                     if global_y == grass_height as i32 {
                         if global_y >= 0 {
                             block_ids[index as usize] = 3;
-                            if global_y > 0 {
-                                height_map[(x + z * CHUNK_SIZE_X) as usize] =
-                                    Some(y as i32);
-                            }
                         } else {
                             block_ids[index as usize] = 2; // Dirt
                         }
@@ -119,12 +103,8 @@ impl ChunkState {
     pub fn ensure_formed(&mut self, akasha_chunk: &AkashaChunk) {
         if self.data.is_none() {
             //let noises = self.noises.as_ref().expect("Noises must be initialized");
-            self.data = Some(ChunkData::new(
-                self.x,
-                self.y,
-                self.z,
-                &akasha_chunk.chunk_noises,
-            ));
+            self.data =
+                Some(ChunkData::new(self.x, self.y, self.z, &akasha_chunk.noises));
         }
     }
 
